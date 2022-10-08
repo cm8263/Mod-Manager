@@ -5,7 +5,7 @@ local jsonFiles = nil
 Mod_Manager_Load = function()
   -- Load list of JSON files in Archives directory
   if jsonFiles == nil then
-    OverlayShow("ui_loadingProgress", true)
+    OverlayShow("ui_loadingIcon", true)
     jsonFiles = {}
 
     local cdHandle = io.popen("cd")
@@ -23,13 +23,16 @@ Mod_Manager_Load = function()
 
     dirHandle:close()
 
-    OverlayShow("ui_loadingProgress", false)
+    OverlayShow("ui_loadingIcon", false)
   end
   
   -- Create Menu
-  local menu = Menu_Create(JumpScrollList, "Mod Manager")
+  local menu = Menu_Create(ListMenu, "Mod Manager Menu")
   menu.align = "left"
   menu.background = {}
+  menu.capacity = 10
+  menu.showArrows = true
+
   menu.Show = function(self, direction)
     if direction and direction > 0 then
       Menu_Main_SetIdle("env_clementineHouse400_developerCommentary")
@@ -53,9 +56,49 @@ Mod_Manager_Load = function()
     Menu_Add(Header, nil, "Mod Manager")
     for i, file in pairs(jsonFiles) do
       local jsonFile = Mod_Manager_Load_JSON(file)
-      Menu_Add(ListButtonLite, "modManagerTest" .. i, jsonFile ~= nil and jsonFile.ModDisplayName or "Unknown Mod #" .. i, (string.format)("DialogBox_Okay(\"%s\")", file))
+      Menu_Add(ListButtonLite, "modManagerTest" .. i, jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. i, (string.format)("Mod_Manager_Mod_View(%s)", i))
     end
     
+    local legendWidget = Menu_Add(Legend)
+    legendWidget.Place = function(self)
+      self:AnchorToAgent(menu.agent, "left", "bottom")
+    end
+
+    Legend_Add("faceButtonDown", "legend_select")
+    Legend_Add("faceButtonRight", "legend_previousMenu", "Menu_Pop()")
+    local legendButton = Menu_Add(LegendButtonBack, nil, "Menu_Pop()", "legendButton_back")
+    legendButton.Place = function(self)
+      self:AnchorToAgent(menu.agent, "left", "bottom")
+    end
+  end
+
+  Menu_Push(menu)
+end
+
+Mod_Manager_Mod_View = function(index)
+  local jsonFile = Mod_Manager_Load_JSON(jsonFiles[index])
+
+  -- Create Menu
+  local menu = Menu_Create(JumpScrollList, jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. fileIndex)
+  menu.align = "left"
+  menu.fileIndex = index
+  
+  menu.Populate = function(self)
+    if not jsonFile or not jsonFile.ModDisplayName then
+      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Error", "Could not load Mod Info!")
+    else
+      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Name", (string.format)("Name: %s", jsonFile.ModDisplayName))
+      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Version", (string.format)("Version: %s", jsonFile.ModVersion))
+      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Author", (string.format)("Author: %s", jsonFile.ModAuthor))
+      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Files", (string.format)("Loaded Files: %s", #jsonFile.ModFiles))
+    end
+    
+    local legendWidget = Menu_Add(Legend)
+    legendWidget.Place = function(self)
+      self:AnchorToAgent(menu.agent, "left", "bottom")
+    end
+
+    Legend_Add("faceButtonDown", "legend_select")
     Legend_Add("faceButtonRight", "legend_previousMenu", "Menu_Pop()")
     local legendButton = Menu_Add(LegendButtonBack, nil, "Menu_Pop()", "legendButton_back")
     legendButton.Place = function(self)
@@ -72,7 +115,7 @@ Mod_Manager_Load_JSON = function(fileName)
     local myTable = {}
     local file = io.open(fileName, "r")
 
-    if file == nil then return nil end
+    if not file then return nil end
 
     local contents = file:read("*a")
     
