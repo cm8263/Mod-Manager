@@ -1,0 +1,13 @@
+{
+  "formatVersion": "1",
+  "tool": {
+    "game": "TTDS",
+    "legacyBuild": true
+  },
+  "mod": {
+    "name": "Mod Manager",
+    "version": "1.0.0",
+    "author": "Inferno",
+    "priority": 999
+  }
+}
