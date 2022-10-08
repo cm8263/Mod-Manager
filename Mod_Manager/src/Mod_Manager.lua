@@ -16,7 +16,7 @@ Mod_Manager_Load = function()
     local dirHandle = io.popen((string.format)("dir \"%s\" /b", archivesDirectory))
     
     for line in dirHandle:lines() do
-      if #line > 5 and line:sub(-5) == ".json" then
+      if #line > 5 and line:sub(-5) == ".json" and line ~= "modinfo_Mod Manager.json" then
         table.insert(jsonFiles, (string.format)("%s/%s", archivesDirectory, line))
       end
     end
@@ -53,10 +53,11 @@ Mod_Manager_Load = function()
   end
 
   menu.Populate = function(self)
-    Menu_Add(Header, nil, "Mod Manager")
-    for i, file in pairs(jsonFiles) do
+    Menu_Add(Header, nil, "Mod Manager Menu")
+
+    for index, file in pairs(jsonFiles) do
       local jsonFile = Mod_Manager_Load_JSON(file)
-      Menu_Add(ListButtonLite, "modManagerTest" .. i, jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. i, (string.format)("Mod_Manager_Mod_View(%s)", i))
+      Menu_Add(ListButtonLite, "modManagerMod" .. index, jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. index, (string.format)("Mod_Manager_Mod_View(%s)", index))
     end
     
     local legendWidget = Menu_Add(Legend)
@@ -79,7 +80,7 @@ Mod_Manager_Mod_View = function(index)
   local jsonFile = Mod_Manager_Load_JSON(jsonFiles[index])
 
   -- Create Menu
-  local menu = Menu_Create(JumpScrollList, jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. fileIndex)
+  local menu = Menu_Create(JumpScrollList, "Mod: " .. (jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. fileIndex))
   menu.align = "left"
   menu.fileIndex = index
   
@@ -87,10 +88,22 @@ Mod_Manager_Mod_View = function(index)
     if not jsonFile or not jsonFile.ModDisplayName then
       Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Error", "Could not load Mod Info!")
     else
+      Menu_Add(Header, nil, "Mod: " .. (jsonFile and jsonFile.ModDisplayName or "Unknown Mod #" .. fileIndex))
+
+      require(jsonFile.ModEntryPoint)
+
       Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Name", (string.format)("Name: %s", jsonFile.ModDisplayName))
       Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Version", (string.format)("Version: %s", jsonFile.ModVersion))
       Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Author", (string.format)("Author: %s", jsonFile.ModAuthor))
-      Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "Files", (string.format)("Loaded Files: %s", #jsonFile.ModFiles))
+
+      if jsonFile.ModEntryPoint then
+        Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "EntryPoint", (string.format)("Entry Point: %s", jsonFile.ModEntryPoint))
+
+        if jsonFile.ModEntryPointFunction then
+          Menu_Add(ListButtonLite, "modManagerModSpacer", "")
+          Menu_Add(ListButtonLite, "modManagerMod" .. self.fileIndex .. "EntryPointFunction", "Launch Mod", (string.format)("%s", jsonFile.ModEntryPointFunction))
+        end
+      end
     end
     
     local legendWidget = Menu_Add(Legend)
